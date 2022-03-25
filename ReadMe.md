@@ -19,11 +19,20 @@ I took data from `https://toloka.ai/ru/datasets`.
 - In preprocessing.py there are class for data preparation
 - requirements.txt have all libraries, that were used in projects
 
+###  Results
+
+For simple model without history validation perplexity was **20.2**
+
+For model with history (saved only 2 last replicas) validation perplexity was **8.4**
+
+For model with history and some person information validation perplexity was **6.1**
+
+
 ### Thoughts
 
 As an autoregressive task it`s common to use models like GPT. After lookup at data I started to clean/preprocess data, add special tokens and integrated all data in fine tune script made by Sber.
 
-### Futher ideas to developing
+### Further ideas to developing
 
 - try ruT5_small from `cointegrated` (folder in transformers repo)
 - add graphics of learning functions
