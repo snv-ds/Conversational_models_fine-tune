@@ -1,5 +1,5 @@
 from typing import List
-from random import shuffle
+from random import shuffle, choices
 from itertools import chain
 
 from tqdm.notebook import tqdm
@@ -8,19 +8,19 @@ from tqdm.notebook import tqdm
 class Dialog:
     def __init__(self, dialogs: List[str], history_size=2, speaker1_token='<speaker1>', speaker2_token='<speaker2>',
                  bos_token='<bos>', eos_token='<eos>'):
-        self.dialogs = dialogs
         self.speaker1_token = speaker1_token
         self.speaker2_token = speaker2_token
+        self.dialogs = [self._preprocess_for_raw_text(dialog) for dialog in dialogs]
         self.history_size = history_size
         self.bos_token = bos_token
         self.eos_token = eos_token
 
         self.result_texts = None
 
-    def preprocess_for_raw_text(self, dialog: str) -> str:
+    def _preprocess_for_raw_text(self, dialog: str) -> str:
         dialog = dialog.replace('<br />', ' ').replace('</span> ', '')
-        dialog = dialog.replace('<span class=participant_1>Пользователь 1: ', self.speaker1_token )
-        dialog = dialog.replace('<span class=participant_2>Пользователь 2: ', self.speaker2_token )
+        dialog = dialog.replace('<span class=participant_1>Пользователь 1: ', self.speaker1_token)
+        dialog = dialog.replace('<span class=participant_2>Пользователь 2: ', self.speaker2_token)
         return dialog
 
     def form_raw_text(self, dialog: str) -> List[str]:
@@ -47,12 +47,16 @@ class Dialog:
             result.append([self.bos_token] + self.form_raw_text(dialog) + [self.eos_token])
         return result
 
-    def form_data_to_train(self):
+    def form_data_to_train(self, use_history=True):
         result = []
         for dialog in tqdm(self.dialogs):
-            replicas = self.get_chunks(self.form_raw_text(dialog))
+            replicas = self.get_chunks(self.form_raw_text(dialog), use_history=True)
             result.extend([[self.bos_token] + dialog + [self.eos_token] for dialog in replicas])
         return result
+
+    def __repr__(self):
+        return f'\n{"*" * 80}\n'.join('\n'.join(self.form_raw_text(self._preprocess_for_raw_text(dialog))) for dialog in
+                                      choices(self.dialogs, k=5))
 
 
 class DialogWithCharacter(Dialog):
@@ -82,12 +86,12 @@ class DialogWithCharacter(Dialog):
                 result.append(' '.join([self.bos_token] + replica + [self.eos_token]))
         return result
 
-    def form_data_to_train(self, include_person=True):
+    def form_data_to_train(self, use_history=True, include_person=True):
         result = []
         iterator = zip(self.dialogs, self.persona2_characteristics, self.persona2_characteristics)
         for chunk in tqdm(iterator):
             dialog, per_1, per_2 = chunk
-            replicas = self.include_all_in_dialog(self.get_chunks(self.form_raw_text(dialog)),
+            replicas = self.include_all_in_dialog(self.get_chunks(self.form_raw_text(dialog), use_history=True),
                                                   include_person, per_1, per_2)
             result.extend(replicas)
         return result
